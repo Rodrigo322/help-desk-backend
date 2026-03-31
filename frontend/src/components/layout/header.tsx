@@ -15,12 +15,12 @@ export function Header() {
   return (
     <header className="flex items-center justify-between border-b border-slate-200 bg-white px-6 py-4">
       <div>
-        <p className="text-sm text-slate-500">Sistema de chamados</p>
+        <p className="text-sm text-slate-500">Navegação principal</p>
         <p className="text-sm font-semibold text-slate-800">{user?.name ?? "Usuário"}</p>
       </div>
 
       <Button variant="ghost" onClick={handleSignOut}>
-        Sair
+        Logout
       </Button>
     </header>
   );

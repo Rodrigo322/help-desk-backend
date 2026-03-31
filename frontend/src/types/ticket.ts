@@ -28,3 +28,14 @@ export type GetTicketDetailsResponse = {
   ticket: Ticket;
 };
 
+export type CreateTicketResponse = {
+  ticket: Ticket;
+};
+
+export type UpdateTicketStatusPayload = {
+  status: TicketStatus;
+};
+
+export type UpdateTicketStatusResponse = {
+  ticket: Ticket;
+};

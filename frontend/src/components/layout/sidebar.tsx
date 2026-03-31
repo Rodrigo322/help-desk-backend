@@ -8,7 +8,10 @@ const linkClass = ({ isActive }: { isActive: boolean }) =>
 export function Sidebar() {
   return (
     <aside className="w-full border-r border-slate-200 bg-white p-4 md:w-64">
-      <h1 className="mb-4 text-lg font-bold text-slate-900">Chamados</h1>
+      <div className="mb-6">
+        <h1 className="text-lg font-bold text-slate-900">Sistema de Chamados</h1>
+        <p className="text-xs text-slate-500">Área autenticada</p>
+      </div>
 
       <nav className="space-y-1">
         <NavLink to="/" className={linkClass} end>
@@ -18,10 +21,9 @@ export function Sidebar() {
           Tickets
         </NavLink>
         <NavLink to="/tickets/new" className={linkClass}>
-          Novo Ticket
+          Novo chamado
         </NavLink>
       </nav>
     </aside>
   );
 }
-

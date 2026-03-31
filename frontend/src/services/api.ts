@@ -5,6 +5,8 @@ import { getAuthToken } from "../utils/storage";
 
 const baseURL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3333/v1";
 
+let unauthorizedHandler: (() => void) | null = null;
+
 export const api = axios.create({
   baseURL
 });
@@ -18,6 +20,23 @@ api.interceptors.request.use((config) => {
 
   return config;
 });
+
+api.interceptors.response.use(
+  (response) => response,
+  (error: AxiosError) => {
+    const isUnauthorized = error.response?.status === 401;
+
+    if (isUnauthorized && unauthorizedHandler && getAuthToken()) {
+      unauthorizedHandler();
+    }
+
+    return Promise.reject(error);
+  }
+);
+
+export function setUnauthorizedHandler(handler: (() => void) | null) {
+  unauthorizedHandler = handler;
+}
 
 export function unwrapApiResponse<T>(payload: ApiResponse<T>): T {
   if (!payload.success) {
@@ -36,7 +55,11 @@ export function getApiErrorMessage(error: unknown): string {
       return message;
     }
 
-    return "Erro de comunicação com a API.";
+    if (error.response?.status === 401) {
+      return "Sua sessao expirou. Faca login novamente.";
+    }
+
+    return "Erro de comunicacao com a API.";
   }
 
   if (error instanceof Error) {
@@ -45,4 +68,3 @@ export function getApiErrorMessage(error: unknown): string {
 
   return "Erro desconhecido.";
 }
-

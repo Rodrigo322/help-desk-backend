@@ -1,31 +1,24 @@
-import { useState } from "react";
 import { useParams } from "react-router-dom";
 
 import { CreateCommentForm } from "../../components/forms/create-comment-form";
 import { UpdateTicketStatusForm } from "../../components/forms/update-ticket-status-form";
 import { UploadAttachmentForm } from "../../components/forms/upload-attachment-form";
-import { Badge } from "../../components/ui/badge";
 import { Card } from "../../components/ui/card";
 import { EmptyState } from "../../components/ui/empty-state";
 import { ErrorState } from "../../components/ui/error-state";
 import { Loading } from "../../components/ui/loading";
-import { useCreateTicketComment, useTicketComments } from "../../hooks/use-ticket-comments";
-import { useTicketDetails, useUpdateTicketStatus } from "../../hooks/use-ticket-details";
+import { PriorityBadge } from "../../components/ui/priority-badge";
+import { StatusBadge } from "../../components/ui/status-badge";
 import {
   useTicketAttachments,
   useUploadTicketAttachment
 } from "../../hooks/use-ticket-attachments";
+import { useCreateTicketComment, useTicketComments } from "../../hooks/use-ticket-comments";
+import { useTicketDetails, useUpdateTicketStatus } from "../../hooks/use-ticket-details";
 import { CommentFormData } from "../../schemas/tickets/comment-schema";
+import { UpdateTicketStatusFormData } from "../../schemas/tickets/update-ticket-status-schema";
 import { getApiErrorMessage } from "../../services/api";
 import { formatDate } from "../../utils/format-date";
-import { formatPriority } from "../../utils/format-priority";
-import { formatStatus } from "../../utils/format-status";
-
-function getStatusVariant(status: "OPEN" | "IN_PROGRESS" | "CLOSED") {
-  if (status === "OPEN") return "info";
-  if (status === "IN_PROGRESS") return "warning";
-  return "success";
-}
 
 function buildAttachmentUrl(fileUrl: string): string {
   if (fileUrl.startsWith("http://") || fileUrl.startsWith("https://")) {
@@ -42,59 +35,50 @@ export function TicketDetailsPage() {
   const params = useParams<{ id: string }>();
   const ticketId = params.id ?? "";
 
-  const [statusError, setStatusError] = useState<string | null>(null);
-  const [commentError, setCommentError] = useState<string | null>(null);
-  const [attachmentError, setAttachmentError] = useState<string | null>(null);
-
-  const ticketDetailsQuery = useTicketDetails(ticketId);
-  const updateStatusMutation = useUpdateTicketStatus(ticketId);
+  const ticketQuery = useTicketDetails(ticketId);
+  const updateTicketStatusMutation = useUpdateTicketStatus(ticketId);
   const commentsQuery = useTicketComments(ticketId);
   const createCommentMutation = useCreateTicketComment(ticketId);
   const attachmentsQuery = useTicketAttachments(ticketId);
   const uploadAttachmentMutation = useUploadTicketAttachment(ticketId);
 
+  const createCommentErrorMessage = createCommentMutation.isError
+    ? getApiErrorMessage(createCommentMutation.error)
+    : null;
+  const uploadAttachmentErrorMessage = uploadAttachmentMutation.isError
+    ? getApiErrorMessage(uploadAttachmentMutation.error)
+    : null;
+  const updateStatusErrorMessage = updateTicketStatusMutation.isError
+    ? getApiErrorMessage(updateTicketStatusMutation.error)
+    : null;
+
   if (!ticketId) {
-    return <ErrorState message="ID do ticket não informado." />;
+    return <ErrorState message="ID do ticket nao informado." />;
   }
 
-  if (ticketDetailsQuery.isLoading) {
+  if (ticketQuery.isLoading) {
     return <Loading />;
   }
 
-  if (ticketDetailsQuery.isError || !ticketDetailsQuery.data) {
-    return <ErrorState message="Falha ao carregar detalhes do ticket." />;
+  if (ticketQuery.isError || !ticketQuery.data) {
+    return <ErrorState message="Nao foi possivel carregar os detalhes do ticket." />;
   }
 
-  const ticket = ticketDetailsQuery.data.ticket;
+  const ticket = ticketQuery.data.ticket;
 
-  async function handleUpdateStatus(data: { status: "OPEN" | "IN_PROGRESS" | "CLOSED" }) {
-    setStatusError(null);
-
-    try {
-      await updateStatusMutation.mutateAsync({ status: data.status });
-    } catch (error) {
-      setStatusError(getApiErrorMessage(error));
-    }
+  function handleCreateComment(data: CommentFormData) {
+    createCommentMutation.reset();
+    return createCommentMutation.mutateAsync({ content: data.content }).then(() => undefined);
   }
 
-  async function handleCreateComment(data: CommentFormData) {
-    setCommentError(null);
-
-    try {
-      await createCommentMutation.mutateAsync({ content: data.content });
-    } catch (error) {
-      setCommentError(getApiErrorMessage(error));
-    }
+  function handleUploadAttachment(file: File) {
+    uploadAttachmentMutation.reset();
+    return uploadAttachmentMutation.mutateAsync(file).then(() => undefined);
   }
 
-  async function handleUploadAttachment(file: File) {
-    setAttachmentError(null);
-
-    try {
-      await uploadAttachmentMutation.mutateAsync(file);
-    } catch (error) {
-      setAttachmentError(getApiErrorMessage(error));
-    }
+  function handleUpdateStatus(data: UpdateTicketStatusFormData) {
+    updateTicketStatusMutation.reset();
+    return updateTicketStatusMutation.mutateAsync({ status: data.status }).then(() => undefined);
   }
 
   return (
@@ -102,33 +86,51 @@ export function TicketDetailsPage() {
       <header className="space-y-2">
         <h1 className="text-2xl font-semibold text-slate-900">{ticket.title}</h1>
         <p className="text-sm text-slate-600">{ticket.description}</p>
-        <div className="flex items-center gap-2">
-          <Badge variant={getStatusVariant(ticket.status)}>{formatStatus(ticket.status)}</Badge>
-          <Badge variant="default">{formatPriority(ticket.priority)}</Badge>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <StatusBadge status={ticket.status} />
+          <PriorityBadge priority={ticket.priority} />
           <span className="text-xs text-slate-500">Criado em {formatDate(ticket.createdAt)}</span>
         </div>
       </header>
 
       <Card className="space-y-3">
-        <h2 className="text-lg font-semibold text-slate-800">Atualizar status</h2>
-        {statusError ? <ErrorState message={statusError} /> : null}
+        <h2 className="text-lg font-semibold text-slate-800">Status do chamado</h2>
+        <p className="text-sm text-slate-600">Atualize o status seguindo as regras de transicao.</p>
+        <div>
+          <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">
+            Status atual
+          </p>
+          <StatusBadge status={ticket.status} />
+        </div>
+
+        {updateTicketStatusMutation.isSuccess ? (
+          <p className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+            Status atualizado com sucesso.
+          </p>
+        ) : null}
+
+        {updateStatusErrorMessage ? <ErrorState message={updateStatusErrorMessage} /> : null}
+
         <UpdateTicketStatusForm
           currentStatus={ticket.status}
-          isLoading={updateStatusMutation.isPending}
+          isLoading={updateTicketStatusMutation.isPending}
           onSubmit={handleUpdateStatus}
         />
       </Card>
 
       <Card className="space-y-4">
-        <h2 className="text-lg font-semibold text-slate-800">Comentários</h2>
-        {commentError ? <ErrorState message={commentError} /> : null}
+        <h2 className="text-lg font-semibold text-slate-800">Comentarios</h2>
+
+        {createCommentErrorMessage ? <ErrorState message={createCommentErrorMessage} /> : null}
+
         <CreateCommentForm
           isLoading={createCommentMutation.isPending}
           onSubmit={handleCreateComment}
         />
 
         {commentsQuery.isLoading ? <Loading /> : null}
-        {commentsQuery.isError ? <ErrorState message="Falha ao carregar comentários." /> : null}
+        {commentsQuery.isError ? <ErrorState message="Nao foi possivel carregar os comentarios." /> : null}
 
         {!commentsQuery.isLoading && !commentsQuery.isError ? (
           commentsQuery.data?.comments.length ? (
@@ -136,28 +138,30 @@ export function TicketDetailsPage() {
               {commentsQuery.data.comments.map((comment) => (
                 <div key={comment.id} className="rounded-md border border-slate-200 p-3">
                   <p className="text-sm text-slate-800">{comment.content}</p>
-                  <p className="mt-2 text-xs text-slate-500">
+                  <p className="mt-1 text-xs text-slate-500">
                     {comment.author.name} - {formatDate(comment.createdAt)}
                   </p>
                 </div>
               ))}
             </div>
           ) : (
-            <EmptyState title="Nenhum comentário" />
+            <EmptyState title="Nenhum comentario encontrado" />
           )
         ) : null}
       </Card>
 
       <Card className="space-y-4">
         <h2 className="text-lg font-semibold text-slate-800">Anexos</h2>
-        {attachmentError ? <ErrorState message={attachmentError} /> : null}
+
+        {uploadAttachmentErrorMessage ? <ErrorState message={uploadAttachmentErrorMessage} /> : null}
+
         <UploadAttachmentForm
           isLoading={uploadAttachmentMutation.isPending}
           onSubmit={handleUploadAttachment}
         />
 
         {attachmentsQuery.isLoading ? <Loading /> : null}
-        {attachmentsQuery.isError ? <ErrorState message="Falha ao carregar anexos." /> : null}
+        {attachmentsQuery.isError ? <ErrorState message="Nao foi possivel carregar os anexos." /> : null}
 
         {!attachmentsQuery.isLoading && !attachmentsQuery.isError ? (
           attachmentsQuery.data?.attachments.length ? (
@@ -172,16 +176,18 @@ export function TicketDetailsPage() {
                   >
                     {attachment.fileName}
                   </a>
+                  {attachment.fileUrl ? (
+                    <p className="mt-1 text-xs text-slate-500">URL: {attachment.fileUrl}</p>
+                  ) : null}
                   <p className="text-xs text-slate-500">{attachment.mimeType}</p>
                 </li>
               ))}
             </ul>
           ) : (
-            <EmptyState title="Nenhum anexo" />
+            <EmptyState title="Nenhum anexo encontrado" />
           )
         ) : null}
       </Card>
     </div>
   );
 }
-

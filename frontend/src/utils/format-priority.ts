@@ -2,7 +2,7 @@ import { TicketPriority } from "../types/ticket";
 
 const priorityLabels: Record<TicketPriority, string> = {
   LOW: "Baixa",
-  MEDIUM: "Média",
+  MEDIUM: "Media",
   HIGH: "Alta"
 };
 

@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 
 import { SignInForm } from "../../components/forms/sign-in-form";
@@ -13,22 +12,17 @@ export function SignInPage() {
   const { isAuthenticated } = useAuth();
   const location = useLocation();
   const signInMutation = useSignIn();
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const redirectTo = (location.state as { from?: string } | undefined)?.from ?? "/";
+  const errorMessage = signInMutation.isError ? getApiErrorMessage(signInMutation.error) : null;
 
   if (isAuthenticated) {
     return <Navigate to={redirectTo} replace />;
   }
 
-  async function handleSignIn(data: SignInFormData) {
-    setErrorMessage(null);
-
-    try {
-      await signInMutation.mutateAsync(data);
-    } catch (error) {
-      setErrorMessage(getApiErrorMessage(error));
-    }
+  function handleSignIn(data: SignInFormData) {
+    signInMutation.reset();
+    signInMutation.mutate(data);
   }
 
   return (
@@ -46,4 +40,3 @@ export function SignInPage() {
     </div>
   );
 }
-

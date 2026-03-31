@@ -4,11 +4,7 @@ import { ticketFiltersSchema, TicketFiltersFormData } from "../schemas/tickets/f
 import { createTicketSchema, CreateTicketFormData } from "../schemas/tickets/create-ticket-schema";
 import { api, unwrapApiResponse } from "../services/api";
 import { ApiResponse } from "../types/api";
-import { ListTicketsResponse, Ticket } from "../types/ticket";
-
-type CreateTicketResponse = {
-  ticket: Ticket;
-};
+import { CreateTicketResponse, ListTicketsResponse } from "../types/ticket";
 
 function normalizeFilters(filters: TicketFiltersFormData): TicketFiltersFormData {
   const parsed = ticketFiltersSchema.parse(filters);
@@ -39,7 +35,7 @@ export function useCreateTicket() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (payload: CreateTicketFormData) => {
+    mutationFn: async (payload: CreateTicketFormData): Promise<CreateTicketResponse> => {
       const parsedPayload = createTicketSchema.parse(payload);
       const response = await api.post<ApiResponse<CreateTicketResponse>>("/tickets", parsedPayload);
       return unwrapApiResponse(response.data);
@@ -49,4 +45,3 @@ export function useCreateTicket() {
     }
   });
 }
-

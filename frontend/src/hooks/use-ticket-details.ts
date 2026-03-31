@@ -1,12 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
+import { updateTicketStatusSchema } from "../schemas/tickets/update-ticket-status-schema";
 import { api, unwrapApiResponse } from "../services/api";
 import { ApiResponse } from "../types/api";
-import { GetTicketDetailsResponse, TicketStatus } from "../types/ticket";
-
-type UpdateTicketStatusPayload = {
-  status: TicketStatus;
-};
+import {
+  GetTicketDetailsResponse,
+  UpdateTicketStatusPayload,
+  UpdateTicketStatusResponse
+} from "../types/ticket";
 
 export function useTicketDetails(ticketId: string) {
   return useQuery({
@@ -24,9 +25,10 @@ export function useUpdateTicketStatus(ticketId: string) {
 
   return useMutation({
     mutationFn: async (payload: UpdateTicketStatusPayload) => {
-      const response = await api.patch<ApiResponse<GetTicketDetailsResponse>>(
+      const parsedPayload = updateTicketStatusSchema.parse(payload);
+      const response = await api.patch<ApiResponse<UpdateTicketStatusResponse>>(
         `/tickets/${ticketId}/status`,
-        payload
+        parsedPayload
       );
 
       return unwrapApiResponse(response.data);
@@ -37,4 +39,3 @@ export function useUpdateTicketStatus(ticketId: string) {
     }
   });
 }
-

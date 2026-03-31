@@ -1,5 +1,6 @@
-import { createContext, ReactNode, useMemo, useState } from "react";
+import { createContext, ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 
+import { setUnauthorizedHandler } from "../services/api";
 import { AuthUser, SignInResponse } from "../types/auth";
 import {
   clearAuthStorage,
@@ -23,22 +24,59 @@ type AuthProviderProps = {
   children: ReactNode;
 };
 
+function readInitialSession() {
+  const storedToken = getAuthToken();
+  const storedUser = getAuthUser();
+
+  if (storedToken && storedUser) {
+    return {
+      token: storedToken,
+      user: storedUser
+    };
+  }
+
+  if (storedToken && !storedUser) {
+    clearAuthStorage();
+  }
+
+  return {
+    token: null,
+    user: null
+  };
+}
+
 export function AuthProvider({ children }: AuthProviderProps) {
-  const [token, setToken] = useState<string | null>(() => getAuthToken());
-  const [user, setUser] = useState<AuthUser | null>(() => getAuthUser());
+  const [session, setSessionState] = useState(readInitialSession);
+  const { token, user } = session;
+
+  const clearSession = useCallback(() => {
+    setSessionState({
+      token: null,
+      user: null
+    });
+    clearAuthStorage();
+  }, []);
 
   function setSession(session: SignInResponse) {
-    setToken(session.token);
-    setUser(session.user);
+    setSessionState({
+      token: session.token,
+      user: session.user
+    });
     setAuthToken(session.token);
     setAuthUser(session.user);
   }
 
   function signOut() {
-    setToken(null);
-    setUser(null);
-    clearAuthStorage();
+    clearSession();
   }
+
+  useEffect(() => {
+    setUnauthorizedHandler(clearSession);
+
+    return () => {
+      setUnauthorizedHandler(null);
+    };
+  }, [clearSession]);
 
   const value = useMemo<AuthContextValue>(
     () => ({
@@ -53,4 +91,3 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
-
