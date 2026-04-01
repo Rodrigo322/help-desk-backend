@@ -4,7 +4,10 @@ import path from "node:path";
 
 import multer from "multer";
 
-const uploadDirectory = path.resolve(process.cwd(), "uploads");
+const isVercelRuntime = process.env.VERCEL === "1";
+const uploadDirectory = isVercelRuntime
+  ? path.resolve("/tmp", "uploads")
+  : path.resolve(process.cwd(), "uploads");
 
 mkdirSync(uploadDirectory, { recursive: true });
 
@@ -25,4 +28,3 @@ const multerConfig = {
 };
 
 export { multerConfig };
-
