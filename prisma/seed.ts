@@ -41,6 +41,10 @@ function normalizeRole(value: string | undefined): UserRole {
   return "ADMIN";
 }
 
+function normalizeEmail(email: string): string {
+  return email.trim().toLowerCase();
+}
+
 function resolveMasterInput(): SeedPrivilegedUserInput {
   const envMaster = {
     name: process.env.MASTER_NAME ?? process.env.ADMIN_NAME,
@@ -63,7 +67,7 @@ function resolveMasterInput(): SeedPrivilegedUserInput {
   if (hasCompleteMasterEnv) {
     return {
       name: envMaster.name!.trim(),
-      email: envMaster.email!.trim(),
+      email: normalizeEmail(envMaster.email!),
       password: envMaster.password!.trim(),
       role: normalizeRole(envMaster.role),
       departmentName: envMaster.departmentName?.trim() || fallbackMasterUser.departmentName
@@ -75,6 +79,7 @@ function resolveMasterInput(): SeedPrivilegedUserInput {
 
 async function upsertPrivilegedUser(input: SeedPrivilegedUserInput) {
   const hashedPassword = await hash(input.password, 10);
+  const normalizedEmail = normalizeEmail(input.email);
 
   const department = await prisma.department.upsert({
     where: {
@@ -91,7 +96,7 @@ async function upsertPrivilegedUser(input: SeedPrivilegedUserInput) {
 
   const user = await prisma.user.upsert({
     where: {
-      email: input.email
+      email: normalizedEmail
     },
     update: {
       name: input.name,
@@ -102,7 +107,7 @@ async function upsertPrivilegedUser(input: SeedPrivilegedUserInput) {
     },
     create: {
       name: input.name,
-      email: input.email,
+      email: normalizedEmail,
       password: hashedPassword,
       role: input.role,
       departmentId: department.id,

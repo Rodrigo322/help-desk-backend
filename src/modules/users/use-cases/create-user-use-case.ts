@@ -32,9 +32,10 @@ export class CreateUserUseCase {
   ) {}
 
   async execute(input: CreateUserUseCaseRequest): Promise<CreateUserUseCaseResponse> {
-    const { name, email, password, departmentId, role } = input;
+    const normalizedEmail = input.email.trim().toLowerCase();
+    const { name, password, departmentId, role } = input;
 
-    if (!name || !email || !password || !departmentId || !role) {
+    if (!name || !normalizedEmail || !password || !departmentId || !role) {
       throw new AppError("Invalid input.", 400);
     }
 
@@ -48,7 +49,7 @@ export class CreateUserUseCase {
       throw new AppError("Department is inactive.", 409);
     }
 
-    const userAlreadyExists = await this.usersRepository.findByEmail(email);
+    const userAlreadyExists = await this.usersRepository.findByEmail(normalizedEmail);
 
     if (userAlreadyExists) {
       throw new AppError("Email already in use.", 409);
@@ -58,7 +59,7 @@ export class CreateUserUseCase {
 
     const user = await this.usersRepository.create({
       name,
-      email,
+      email: normalizedEmail,
       password: hashedPassword,
       departmentId,
       role

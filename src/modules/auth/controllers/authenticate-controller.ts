@@ -5,7 +5,7 @@ import { successResponse } from "../../../shared/http/api-response";
 import { makeAuthenticateUseCase } from "../factories/make-authenticate-use-case";
 
 const authenticateBodySchema = z.object({
-  email: z.string().email(),
+  email: z.string().trim().toLowerCase().email(),
   password: z.string().min(1)
 });
 

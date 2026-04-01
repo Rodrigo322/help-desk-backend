@@ -34,6 +34,7 @@ export class UpdateUserUseCase {
   ) {}
 
   async execute(input: UpdateUserUseCaseRequest): Promise<UpdateUserUseCaseResponse> {
+    const normalizedEmail = input.email.trim().toLowerCase();
     const existingUser = await this.usersRepository.findById(input.userId);
 
     if (!existingUser) {
@@ -50,7 +51,7 @@ export class UpdateUserUseCase {
       throw new AppError("Department is inactive.", 409);
     }
 
-    const userWithSameEmail = await this.usersRepository.findByEmail(input.email);
+    const userWithSameEmail = await this.usersRepository.findByEmail(normalizedEmail);
 
     if (userWithSameEmail && userWithSameEmail.id !== input.userId) {
       throw new AppError("Email already in use.", 409);
@@ -61,7 +62,7 @@ export class UpdateUserUseCase {
     const user = await this.usersRepository.update({
       userId: input.userId,
       name: input.name,
-      email: input.email,
+      email: normalizedEmail,
       departmentId: input.departmentId,
       role: input.role,
       ...(hashedPassword ? { password: hashedPassword } : {})

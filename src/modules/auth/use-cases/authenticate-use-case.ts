@@ -25,13 +25,14 @@ export class AuthenticateUseCase {
   constructor(private readonly usersRepository: UsersRepository) {}
 
   async execute(input: AuthenticateUseCaseRequest): Promise<AuthenticateUseCaseResponse> {
-    const { email, password } = input;
+    const normalizedEmail = input.email.trim().toLowerCase();
+    const { password } = input;
 
-    if (!email || !password) {
+    if (!normalizedEmail || !password) {
       throw new AppError("Invalid credentials.", 400);
     }
 
-    const user = await this.usersRepository.findByEmail(email);
+    const user = await this.usersRepository.findByEmail(normalizedEmail);
 
     if (!user) {
       throw new AppError("Invalid credentials.", 401);

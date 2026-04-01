@@ -34,6 +34,32 @@ describe("AuthenticateUseCase", () => {
     expect(result.user.departmentId).toBe(department.id);
   });
 
+  it("should authenticate even when email is provided in uppercase", async () => {
+    const usersRepository = new InMemoryUsersRepository();
+    const departmentsRepository = new InMemoryDepartmentsRepository();
+    const department = await departmentsRepository.create({ name: "Support" });
+    const signUpUseCase = new CreateUserUseCase(usersRepository, departmentsRepository);
+    const sut = new AuthenticateUseCase(usersRepository);
+
+    process.env.JWT_SECRET = "test-secret";
+
+    await signUpUseCase.execute({
+      name: "John Doe",
+      email: "john@example.com",
+      password: "123456",
+      departmentId: department.id,
+      role: "EMPLOYEE"
+    });
+
+    const result = await sut.execute({
+      email: "JOHN@EXAMPLE.COM",
+      password: "123456"
+    });
+
+    expect(result.token).toBeTypeOf("string");
+    expect(result.user.email).toBe("john@example.com");
+  });
+
   it("should fail when credentials are invalid", async () => {
     const usersRepository = new InMemoryUsersRepository();
     const sut = new AuthenticateUseCase(usersRepository);

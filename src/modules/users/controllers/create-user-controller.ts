@@ -7,7 +7,7 @@ import { makeCreateUserUseCase } from "../factories/make-create-user-use-case";
 
 const createUserBodySchema = z.object({
   name: z.string().min(1),
-  email: z.string().email(),
+  email: z.string().trim().toLowerCase().email(),
   password: z.string().min(6),
   departmentId: z.string().uuid(),
   role: z.enum(USER_ROLE_VALUES).default("EMPLOYEE")

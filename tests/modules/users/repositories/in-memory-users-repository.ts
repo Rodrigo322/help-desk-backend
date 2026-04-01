@@ -18,7 +18,8 @@ export class InMemoryUsersRepository implements UsersRepository {
   }
 
   async findByEmail(email: string): Promise<UserEntity | null> {
-    const user = this.items.find((item) => item.email === email);
+    const normalizedEmail = email.trim().toLowerCase();
+    const user = this.items.find((item) => item.email.toLowerCase() === normalizedEmail);
     return user ?? null;
   }
 

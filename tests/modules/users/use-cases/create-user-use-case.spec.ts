@@ -31,6 +31,24 @@ describe("CreateUserUseCase", () => {
     expect(await compare("123456", storedUser.password)).toBe(true);
   });
 
+  it("should normalize email to lowercase on create", async () => {
+    const usersRepository = new InMemoryUsersRepository();
+    const departmentsRepository = new InMemoryDepartmentsRepository();
+    const department = await departmentsRepository.create({ name: "Support" });
+    const sut = new CreateUserUseCase(usersRepository, departmentsRepository);
+
+    const result = await sut.execute({
+      name: "John Doe",
+      email: "John.Doe@Example.COM",
+      password: "123456",
+      departmentId: department.id,
+      role: "EMPLOYEE"
+    });
+
+    expect(result.user.email).toBe("john.doe@example.com");
+    expect(usersRepository.items[0].email).toBe("john.doe@example.com");
+  });
+
   it("should not allow duplicated email", async () => {
     const usersRepository = new InMemoryUsersRepository();
     const departmentsRepository = new InMemoryDepartmentsRepository();
@@ -48,7 +66,7 @@ describe("CreateUserUseCase", () => {
     await expect(
       sut.execute({
         name: "Jane Doe",
-        email: "john@example.com",
+        email: "JOHN@EXAMPLE.COM",
         password: "abcdef",
         departmentId: department.id,
         role: "EMPLOYEE"

@@ -7,7 +7,7 @@ import { makeUpdateUserUseCase } from "../factories/make-update-user-use-case";
 
 const updateUserBodySchema = z.object({
   name: z.string().min(1),
-  email: z.string().email(),
+  email: z.string().trim().toLowerCase().email(),
   departmentId: z.string().uuid(),
   role: z.enum(USER_ROLE_VALUES),
   password: z.string().min(6).optional()
