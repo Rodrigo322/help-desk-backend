@@ -5,6 +5,17 @@ import { ZodError } from "zod";
 import { AppError } from "../errors/app-error";
 import { ApiErrorResponse } from "./api-response";
 
+function logError(message: string, error?: unknown) {
+  const timestamp = new Date().toISOString();
+
+  if (error) {
+    console.error(`[${timestamp}] ${message}`, error);
+    return;
+  }
+
+  console.error(`[${timestamp}] ${message}`);
+}
+
 function formatError(message: string): ApiErrorResponse {
   return {
     success: false,
@@ -14,16 +25,29 @@ function formatError(message: string): ApiErrorResponse {
 
 export const globalErrorHandler: ErrorRequestHandler = (
   error,
-  _request,
+  request,
   response,
   _next
 ) => {
   if (error instanceof AppError) {
+    if (error.statusCode >= 500) {
+      logError(`[error] ${request.method} ${request.originalUrl} | ${error.message}`);
+    }
+
     return response.status(error.statusCode).json(formatError(error.message));
   }
 
   if (error instanceof ZodError) {
-    return response.status(400).json(formatError("Validation failed."));
+    const firstIssue = error.issues[0];
+
+    if (!firstIssue) {
+      return response.status(400).json(formatError("Validation failed."));
+    }
+
+    const path = firstIssue.path.join(".");
+    const message = path ? `Validation failed on "${path}": ${firstIssue.message}` : `Validation failed: ${firstIssue.message}`;
+
+    return response.status(400).json(formatError(message));
   }
 
   if (error instanceof TokenExpiredError || error instanceof JsonWebTokenError) {
@@ -42,6 +66,12 @@ export const globalErrorHandler: ErrorRequestHandler = (
     }
 
     return response.status(400).json(formatError("Database request error."));
+  }
+
+  logError(`[error] ${request.method} ${request.originalUrl} | Unexpected error.`, error);
+
+  if (error instanceof Error && error.stack) {
+    logError(`[error] stack | ${error.stack}`);
   }
 
   return response.status(500).json(formatError("Internal server error."));

@@ -2,22 +2,22 @@ import { useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 
 import { ticketFiltersSchema, TicketFiltersFormData } from "../schemas/tickets/filters-schema";
-import { TicketPriority, TicketStatus } from "../types/ticket";
+import { TicketListingScope, TicketPriority, TicketStatus } from "../types/ticket";
 import { useTickets } from "./use-tickets";
 
 const DEFAULT_FILTERS: TicketFiltersFormData = {
+  scope: "department",
   status: undefined,
   priority: undefined,
-  userId: undefined,
   page: 1,
   pageSize: 10
 };
 
 function parseFiltersFromSearchParams(searchParams: URLSearchParams): TicketFiltersFormData {
   const parsed = ticketFiltersSchema.safeParse({
+    scope: searchParams.get("scope") ?? undefined,
     status: searchParams.get("status") ?? undefined,
     priority: searchParams.get("priority") ?? undefined,
-    userId: searchParams.get("userId") ?? undefined,
     page: searchParams.get("page") ?? undefined,
     pageSize: searchParams.get("pageSize") ?? undefined
   });
@@ -32,16 +32,16 @@ function parseFiltersFromSearchParams(searchParams: URLSearchParams): TicketFilt
 function buildSearchParams(filters: TicketFiltersFormData): URLSearchParams {
   const params = new URLSearchParams();
 
+  if (filters.scope !== DEFAULT_FILTERS.scope) {
+    params.set("scope", filters.scope);
+  }
+
   if (filters.status) {
     params.set("status", filters.status);
   }
 
   if (filters.priority) {
     params.set("priority", filters.priority);
-  }
-
-  if (filters.userId) {
-    params.set("userId", filters.userId);
   }
 
   if (filters.page !== DEFAULT_FILTERS.page) {
@@ -58,16 +58,21 @@ function buildSearchParams(filters: TicketFiltersFormData): URLSearchParams {
 export function useTicketListing() {
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const filters = useMemo(
-    () => parseFiltersFromSearchParams(searchParams),
-    [searchParams]
-  );
+  const filters = useMemo(() => parseFiltersFromSearchParams(searchParams), [searchParams]);
 
   const ticketsQuery = useTickets(filters);
 
   function commitFilters(nextFilters: TicketFiltersFormData) {
     const validatedFilters = ticketFiltersSchema.parse(nextFilters);
     setSearchParams(buildSearchParams(validatedFilters), { replace: true });
+  }
+
+  function handleScopeChange(scope: TicketListingScope) {
+    commitFilters({
+      ...filters,
+      scope,
+      page: 1
+    });
   }
 
   function handleStatusChange(status: TicketStatus | undefined) {
@@ -121,6 +126,7 @@ export function useTicketListing() {
   return {
     ticketsQuery,
     filters,
+    handleScopeChange,
     handleStatusChange,
     handlePriorityChange,
     handlePageSizeChange,
@@ -128,4 +134,3 @@ export function useTicketListing() {
     goToNextPage
   };
 }
-

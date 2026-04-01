@@ -26,12 +26,12 @@ export function UploadAttachmentForm({ isLoading, onSubmit }: UploadAttachmentFo
 
   return (
     <div className="space-y-3">
-      <label className="flex w-full flex-col gap-1 text-sm text-slate-700">
-        <span className="font-medium">Novo anexo</span>
+      <label className="flex w-full flex-col gap-1.5 text-sm text-slate-700">
+        <span className="font-semibold">Novo anexo</span>
         <input
           type="file"
           onChange={handleFileChange}
-          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+          className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm"
         />
       </label>
 
@@ -41,4 +41,3 @@ export function UploadAttachmentForm({ isLoading, onSubmit }: UploadAttachmentFo
     </div>
   );
 }
-

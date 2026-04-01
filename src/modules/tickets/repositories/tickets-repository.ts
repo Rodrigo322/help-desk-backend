@@ -6,7 +6,15 @@ export type TicketEntity = {
   description: string;
   status: TicketStatus;
   priority: TicketPriority;
-  userId: string;
+  createdByUserId: string;
+  originDepartmentId: string;
+  targetDepartmentId: string;
+  assignedToUserId: string | null;
+  closedByUserId: string | null;
+  firstResponseAt: Date | null;
+  resolvedAt: Date | null;
+  firstResponseDeadlineAt: Date | null;
+  resolutionDeadlineAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -16,27 +24,42 @@ export type CreateTicketRepositoryInput = {
   description: string;
   priority: TicketPriority;
   status: TicketStatus;
-  userId: string;
+  createdByUserId: string;
+  originDepartmentId: string;
+  targetDepartmentId: string;
+  firstResponseDeadlineAt: Date;
+  resolutionDeadlineAt: Date;
 };
 
-export type FindByIdAndUserIdRepositoryInput = {
+export type UpdateTicketAssignmentRepositoryInput = {
   ticketId: string;
-  userId: string;
+  assignedToUserId: string;
+  status?: TicketStatus;
+  firstResponseAt?: Date;
 };
 
-export type UpdateTicketStatusRepositoryInput = {
+export type CloseTicketRepositoryInput = {
   ticketId: string;
-  status: TicketStatus;
+  closedByUserId: string;
 };
 
-export type ListTicketsRepositoryFilters = {
+export type ResolveTicketRepositoryInput = {
+  ticketId: string;
+  resolvedByUserId: string;
+};
+
+export type UpdateTicketPriorityRepositoryInput = {
+  ticketId: string;
+  priority: TicketPriority;
+};
+
+export type TicketFilters = {
   status?: TicketStatus;
   priority?: TicketPriority;
-  userId?: string;
 };
 
 export type ListTicketsRepositoryInput = {
-  filters?: ListTicketsRepositoryFilters;
+  filters?: TicketFilters;
   page: number;
   pageSize: number;
   orderByCreatedAt?: "asc" | "desc";
@@ -49,8 +72,21 @@ export type ListTicketsRepositoryOutput = {
 
 export interface TicketsRepository {
   create(data: CreateTicketRepositoryInput): Promise<TicketEntity>;
-  list(data: ListTicketsRepositoryInput): Promise<ListTicketsRepositoryOutput>;
   findById(ticketId: string): Promise<TicketEntity | null>;
-  findByIdAndUserId(data: FindByIdAndUserIdRepositoryInput): Promise<TicketEntity | null>;
-  updateStatus(data: UpdateTicketStatusRepositoryInput): Promise<TicketEntity>;
+  assignToUser(data: UpdateTicketAssignmentRepositoryInput): Promise<TicketEntity>;
+  resolve(data: ResolveTicketRepositoryInput): Promise<TicketEntity>;
+  close(data: CloseTicketRepositoryInput): Promise<TicketEntity>;
+  updatePriority(data: UpdateTicketPriorityRepositoryInput): Promise<TicketEntity>;
+  listByTargetDepartment(
+    departmentId: string,
+    data: ListTicketsRepositoryInput
+  ): Promise<ListTicketsRepositoryOutput>;
+  listByCreatedByUser(
+    userId: string,
+    data: ListTicketsRepositoryInput
+  ): Promise<ListTicketsRepositoryOutput>;
+  listByAssignedToUser(
+    userId: string,
+    data: ListTicketsRepositoryInput
+  ): Promise<ListTicketsRepositoryOutput>;
 }

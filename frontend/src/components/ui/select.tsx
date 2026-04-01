@@ -1,4 +1,4 @@
-import { SelectHTMLAttributes } from "react";
+import { forwardRef, SelectHTMLAttributes } from "react";
 
 import { FormField } from "./form-field";
 
@@ -14,11 +14,15 @@ type SelectProps = SelectHTMLAttributes<HTMLSelectElement> & {
   options: SelectOption[];
 };
 
-export function Select({ label, error, options, className = "", ...props }: SelectProps) {
+export const Select = forwardRef<HTMLSelectElement, SelectProps>(function Select(
+  { label, error, options, className = "", ...props },
+  ref
+) {
   return (
     <FormField label={label} error={error}>
       <select
-        className={`w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none ring-brand-500 transition focus:border-brand-500 focus:ring-2 ${className}`}
+        ref={ref}
+        className={`w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-900 outline-none ring-brand-500 transition focus:border-brand-500 focus:bg-white focus:ring-2 ${className}`}
         {...props}
       >
         {options.map((option) => (
@@ -29,4 +33,4 @@ export function Select({ label, error, options, className = "", ...props }: Sele
       </select>
     </FormField>
   );
-}
+});

@@ -1,22 +1,18 @@
 # Frontend - Sistema de Chamados
 
-## Visao Geral da Arquitetura
+## Visao geral da arquitetura
+Frontend React + TypeScript estruturado por camadas, seguindo separacao de responsabilidades:
 
-Este projeto implementa o frontend do sistema de chamados com separacao por camadas e responsabilidades:
+- `pages`: composicao de telas e fluxo de navegacao
+- `components`: UI reutilizavel, formularios e layout
+- `hooks`: integracao com API e cache (TanStack Query)
+- `contexts`: estado global de autenticacao
+- `services`: cliente Axios centralizado
+- `schemas`: validacao de entrada com Zod
+- `types`: contratos de dominio e API
+- `utils`: funcoes puras de apoio
 
-- `pages`: composicao de tela e fluxo de navegacao.
-- `components`: UI reutilizavel, formularios e layout.
-- `hooks`: regra de integracao com API e cache (TanStack Query).
-- `contexts`: estado global de autenticacao.
-- `schemas`: validacao de entrada com Zod.
-- `services`: cliente HTTP Axios e servicos de acesso.
-- `types`: contratos tipados de dominio e API.
-- `utils`: utilitarios puros (storage, formatadores, regras auxiliares).
-
-A regra de negocio de UI nao fica concentrada nas paginas. As paginas orquestram hooks e componentes.
-
-## Stack Usada
-
+## Stack
 - React 18
 - TypeScript
 - Vite
@@ -27,8 +23,7 @@ A regra de negocio de UI nao fica concentrada nas paginas. As paginas orquestram
 - Zod
 - Tailwind CSS
 
-## Estrutura de Pastas
-
+## Estrutura de pastas
 ```txt
 src/
   main.tsx
@@ -43,6 +38,8 @@ src/
       sign-in.tsx
     dashboard/
       index.tsx
+    notifications/
+      index.tsx
     tickets/
       list-tickets.tsx
       create-ticket.tsx
@@ -50,50 +47,38 @@ src/
 
   components/
     ui/
-      badge.tsx
-      button.tsx
-      card.tsx
-      empty-state.tsx
-      error-state.tsx
-      form-field.tsx
-      input.tsx
-      loading.tsx
-      priority-badge.tsx
-      select.tsx
-      status-badge.tsx
-      textarea.tsx
     forms/
-      create-comment-form.tsx
-      create-ticket-form.tsx
       sign-in-form.tsx
-      update-ticket-status-form.tsx
+      create-ticket-form.tsx
+      create-comment-form.tsx
       upload-attachment-form.tsx
     layout/
       app-layout.tsx
-      header.tsx
       sidebar.tsx
-
-  contexts/
-    auth-context.tsx
+      header.tsx
 
   hooks/
     use-auth.ts
-    use-dashboard.ts
     use-sign-in.ts
-    use-ticket-attachments.ts
-    use-ticket-comments.ts
-    use-ticket-details.ts
+    use-dashboard.ts
+    use-departments.ts
+    use-notifications.ts
     use-ticket-listing.ts
     use-tickets.ts
+    use-ticket-details.ts
+    use-ticket-comments.ts
+    use-ticket-attachments.ts
+
+  contexts/
+    auth-context.tsx
 
   schemas/
     auth/
       sign-in-schema.ts
     tickets/
-      comment-schema.ts
       create-ticket-schema.ts
       filters-schema.ts
-      update-ticket-status-schema.ts
+      comment-schema.ts
 
   services/
     api.ts
@@ -101,138 +86,109 @@ src/
 
   types/
     api.ts
-    attachment.ts
     auth.ts
-    comment.ts
+    department.ts
+    notification.ts
     ticket.ts
+    comment.ts
+    attachment.ts
 
   utils/
-    format-date.ts
-    format-priority.ts
-    format-status.ts
     storage.ts
-    ticket-status-transition.ts
+    format-date.ts
+    format-status.ts
+    format-priority.ts
+    env.ts
 ```
 
-## Como Rodar o Projeto
+## Fluxo entre departamentos (frontend)
+1. Usuario cria ticket para um `targetDepartmentId`.
+2. Tela de detalhes mostra:
+- departamento de origem
+- departamento de destino
+- usuario responsavel (quando houver)
+3. Listagem possui escopos separados:
+- chamados do meu departamento
+- chamados que eu criei
+- chamados atribuidos a mim
+4. No detalhe do ticket:
+- botao `Pegar chamado` quando permitido
+- botao `Concluir chamado` quando permitido
+5. Gestores possuem area de notificacoes (`/notifications`).
 
-### Pre-requisitos
-
-- Node.js 18+
-- npm 9+
-- Backend do sistema de chamados rodando e acessivel
-
-### Passos
-
-1. Instale dependencias:
-
+## Como rodar
+1. Instalar dependencias:
 ```bash
 npm install
 ```
 
-2. Configure variaveis de ambiente:
-
+2. Configurar ambiente:
 ```bash
-# Linux/macOS
 cp .env.example .env
-
-# Windows PowerShell
-Copy-Item .env.example .env
 ```
 
-3. Suba o ambiente de desenvolvimento:
-
+3. Executar em desenvolvimento:
 ```bash
 npm run dev
 ```
 
 4. Build de producao:
-
 ```bash
 npm run build
 ```
 
-5. Preview local do build:
-
+5. Preview local:
 ```bash
 npm run preview
 ```
 
-## Variaveis de Ambiente
-
+## Variaveis de ambiente
 Arquivo `.env`:
-
 ```env
-VITE_API_BASE_URL="http://localhost:3333/v1"
+VITE_API_URL="http://localhost:3333/v1"
 ```
 
-Observacoes:
+## Autenticacao
+- Login em `POST /sessions`
+- Token JWT salvo em `localStorage`
+- Interceptor Axios injeta `Authorization: Bearer <token>`
+- Tratamento centralizado de `401` limpa sessao
+- `ProtectedRoute` bloqueia rotas privadas
 
-- O backend deve expor rotas versionadas com prefixo `/v1`.
-- O valor de `VITE_API_BASE_URL` deve apontar para a base da API.
+## Principais rotas frontend
+- `/sign-in`
+- `/`
+- `/tickets`
+- `/tickets/new`
+- `/tickets/:id`
+- `/notifications`
 
-## Como a Autenticacao Funciona
-
-Fluxo implementado:
-
-1. Usuario envia email e senha em `SignInForm`.
-2. `useSignIn` chama `auth-service.ts`, que usa `api.ts` para `POST /sessions`.
-3. Em sucesso, `AuthProvider` persiste `token` e `user` no `localStorage`.
-4. Interceptor de request do Axios injeta automaticamente `Authorization: Bearer <token>`.
-5. `ProtectedRoute` bloqueia acesso a rotas privadas quando nao autenticado.
-6. Interceptor de response trata `401` centralmente:
-   - dispara `unauthorizedHandler` registrado no `AuthProvider`;
-   - limpa sessao e storage;
-   - o usuario volta para fluxo de login por protecao de rota.
-
-## Principais Rotas
-
-### Rotas de frontend
-
-- `GET /sign-in` -> pagina publica de login
-- `GET /` -> dashboard autenticada
-- `GET /tickets` -> listagem de tickets
-- `GET /tickets/new` -> criacao de ticket
-- `GET /tickets/:id` -> detalhe do ticket
-
-### Endpoints backend consumidos
-
+## Endpoints backend consumidos
 - `POST /v1/sessions`
-- `GET /v1/tickets`
+- `GET /v1/departments`
+- `GET /v1/notifications/me`
 - `POST /v1/tickets`
+- `GET /v1/tickets`
+- `GET /v1/tickets/me/created`
+- `GET /v1/tickets/me/assigned`
 - `GET /v1/tickets/:id`
-- `PATCH /v1/tickets/:id/status`
+- `POST /v1/tickets/:id/assign`
+- `PATCH /v1/tickets/:id/close`
 - `GET /v1/tickets/:ticketId/comments`
 - `POST /v1/tickets/:ticketId/comments`
 - `GET /v1/tickets/:ticketId/attachments`
 - `POST /v1/tickets/:ticketId/attachments`
 
-## Padrao de Consumo da API
+## Padrao de consumo da API
+- Cliente HTTP unico em `src/services/api.ts`
+- `unwrapApiResponse` para contrato `{ success, data/error }`
+- Hooks concentram queries e mutations
+- Sem chamadas HTTP diretamente em componentes de pagina
 
-Padrao adotado no frontend:
-
-- Cliente Axios unico em `src/services/api.ts`.
-- Request interceptor para token Bearer.
-- Response interceptor para tratamento global de `401`.
-- Contrato de resposta:
-  - sucesso: `{ success: true, data: ... }`
-  - erro: `{ success: false, error: { message: string } }`
-- `unwrapApiResponse` converte resposta tipada e lanca erro quando `success` for `false`.
-- `getApiErrorMessage` centraliza mensagem amigavel para exibicao.
-- Hooks com TanStack Query concentram:
-  - fetch e mutacoes;
-  - invalidacao de cache;
-  - normalizacao de filtros/payloads.
-
-## Convencoes Arquiteturais Obrigatorias
-
-- Nao fazer chamadas HTTP diretamente nas paginas.
-- Centralizar integracao HTTP em `services` + `hooks`.
-- Formularios com React Hook Form + Zod.
-- Validacao com Zod antes de enviar payload para API.
-- Componentes de pagina devem ser finos e focados em composicao.
-- Reuso de componentes de UI em `components/ui`.
-- Estado de autenticacao centralizado em `AuthContext`.
-- Rotas privadas protegidas por `ProtectedRoute`.
-- Tipagem forte para payloads, responses e entidades de dominio.
-- Seguir versionamento de API com prefixo `/v1`.
+## Convencoes arquiteturais obrigatorias
+- Validacao de formularios com React Hook Form + Zod
+- Paginas finas, sem regra pesada
+- API centralizada em hooks/services
+- Reuso de UI via `components/ui`
+- Cache e invalidacao com TanStack Query
+- Tipagem forte em `types`

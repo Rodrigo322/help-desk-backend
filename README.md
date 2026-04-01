@@ -1,226 +1,142 @@
 # Backend - Sistema de Chamados
 
-## Visão geral
-Backend em Node.js com TypeScript para gerenciamento de chamados (tickets), comentários e anexos, com autenticação JWT e arquitetura modular baseada em Clean Architecture.
+## Visao geral
+Backend em Node.js + TypeScript com Clean Architecture por modulo de dominio.
 
-O projeto separa claramente HTTP, regra de negócio, acesso a dados e composição de dependências:
-
-- `controllers`: camada HTTP (entrada/saída)
-- `use-cases`: regra de negócio
-- `repositories`: contratos + implementação Prisma
-- `factories`: criação manual de use-cases/controllers
+Camadas:
+- `controllers`: HTTP (finos)
+- `use-cases`: regra de negocio
+- `repositories`: contratos + implementacao Prisma
+- `factories`: injecao manual
 
 ## Stack
-- Node.js + TypeScript
 - Express
-- Prisma ORM + PostgreSQL
+- Prisma 7 + PostgreSQL
 - JWT (`jsonwebtoken`)
-- Hash de senha (`bcryptjs`)
-- Upload de arquivos (`multer`)
-- Validação de entrada (`zod`)
-- Testes unitários (`vitest`)
+- `bcryptjs`
+- `zod`
+- `multer`
 
-## Estrutura de pastas
+## Evolucao Service Desk (Zendesk/ServiceNow-like)
+### Status de ticket
+- `NEW`
+- `OPEN`
+- `IN_PROGRESS`
+- `PENDING`
+- `ON_HOLD`
+- `RESOLVED`
+- `CLOSED`
+
+### Regras principais
+- Ticket nasce em `NEW`
+- Ao assumir: `IN_PROGRESS`
+- `RESOLVED` deve ocorrer antes de `CLOSED`
+
+### Comentarios
+- `Comment.isInternal` para nota interna
+- Comentario interno permitido para `MANAGER` e `ADMIN`
+
+### Audit log
+Entidade `TicketAuditLog` registra:
+- alteracao de status
+- atribuicao
+- alteracao de prioridade
+
+### SLA basico
+Ticket registra:
+- `firstResponseDeadlineAt`
+- `resolutionDeadlineAt`
+- `firstResponseAt`
+- `resolvedAt`
+
+### Notificacoes
+Notificacao com `eventType`:
+- `CREATED`
+- `ASSIGNED`
+- `UPDATED`
+
+## Estrutura (resumo)
 ```text
 src/
-  app.ts
-  server.ts
-  routes.ts
-  configs/
-    multer.ts
-  database/
-    prisma.ts
-  middlewares/
-    authenticate.ts
   modules/
     auth/
-      controllers/
-      factories/
-      use-cases/
-      routes.ts
     users/
-      controllers/
-      factories/
-      repositories/
-        prisma/
-      use-cases/
-      routes.ts
+    departments/
     tickets/
-      controllers/
-      entities/
-      errors/
-      factories/
-      repositories/
-        prisma/
-      use-cases/
-      routes.ts
     comments/
-      controllers/
-      factories/
-      repositories/
-        prisma/
-      use-cases/
-      routes.ts
     attachments/
-      controllers/
-      factories/
-      repositories/
-        prisma/
-      use-cases/
-      routes.ts
-  shared/
-    errors/
-    http/
-
-prisma/
-  schema.prisma
-  migrations/
-  seed.ts
-
-tests/
-  modules/
-    auth/
-    users/
-    tickets/
-    comments/
+    notifications/
+    auditlogs/
 ```
 
-## Como rodar o projeto
-### 1. Instalar dependências
+## Rotas principais (/v1)
+### Auth/User
+- `POST /sessions`
+- `POST /users` (`ADMIN` only)
+- `GET /me`
+
+### Departments
+- `GET /departments`
+- `POST /departments` (`ADMIN` only)
+
+### Tickets
+- `POST /tickets`
+- `GET /tickets`
+- `GET /tickets/me/created`
+- `GET /tickets/me/assigned`
+- `GET /tickets/:id`
+- `POST /tickets/:id/assign`
+- `PATCH /tickets/:id/resolve`
+- `PATCH /tickets/:id/close`
+- `PATCH /tickets/:id/priority`
+- `GET /tickets/:ticketId/audit-logs`
+
+### Comments
+- `POST /tickets/:ticketId/comments` (`isInternal` opcional)
+- `GET /tickets/:ticketId/comments?includeInternal=true`
+
+### Attachments
+- `POST /tickets/:ticketId/attachments`
+- `GET /tickets/:ticketId/attachments`
+
+### Notifications
+- `GET /notifications/me`
+
+## Variaveis de ambiente
+Ver `.env.example`.
+
+Principais:
+- `DATABASE_URL`
+- `DIRECT_URL`
+- `JWT_SECRET`
+- `CORS_ORIGIN`
+
+## Seed (master)
+Seed cria/atualiza usuario com permissao total (`ADMIN`) e vincula ao departamento configurado.
+Em desenvolvimento local, tambem cria/atualiza um admin de compatibilidade: `admin@local.dev` (`admin123456`).
+
+Variaveis recomendadas:
+- `MASTER_NAME`
+- `MASTER_EMAIL`
+- `MASTER_PASSWORD`
+- `MASTER_ROLE` (default `ADMIN`)
+- `MASTER_DEPARTMENT`
+
+## Comandos
 ```bash
 npm install
-```
-
-### 2. Configurar ambiente
-Crie um `.env` a partir do `.env.example`:
-
-```bash
-cp .env.example .env
-```
-
-No Windows PowerShell:
-
-```powershell
-Copy-Item .env.example .env
-```
-
-### 3. Rodar migrations
-```bash
-npm run prisma:migrate
-```
-
-### 4. Gerar Prisma Client (se necessário)
-```bash
 npm run prisma:generate
-```
-
-### 5. Executar seed inicial
-```bash
+npm run prisma:migrate
 npm run seed
-```
-
-Alternativa via Prisma:
-```bash
-npm run prisma:seed
-```
-
-### 6. Subir servidor em desenvolvimento
-```bash
 npm run dev
 ```
 
-Servidor padrão: `http://localhost:3333`
-
-## Configuração do `.env`
-Variáveis mínimas:
-
-```env
-PORT=3333
-DATABASE_URL="postgresql://postgres:postgres@localhost:5432/app_db?schema=public"
-JWT_SECRET="super-secret"
-```
-
-Variáveis para seed de admin:
-
-```env
-ADMIN_NAME="Local Admin"
-ADMIN_EMAIL="admin@local.dev"
-ADMIN_PASSWORD="Admin@123456"
-```
-
-Comportamento do seed:
-- Se `ADMIN_*` estiver completo, usa esses valores.
-- Em ambiente local, se não estiver completo, usa fallback seguro de desenvolvimento.
-- Em produção (`NODE_ENV=production`), `ADMIN_*` é obrigatório.
-
-## Rotas principais (`/v1`)
-### Health/Auth/User
-- `GET /v1/health`
-- `POST /v1/users` (sign-up)
-- `POST /v1/sessions` (sign-in)
-- `GET /v1/me` (autenticado)
-
-### Tickets
-- `POST /v1/tickets`
-- `GET /v1/tickets`
-- `GET /v1/tickets/:id`
-- `PATCH /v1/tickets/:id/status`
-
-Filtros/paginação em `GET /v1/tickets`:
-- `status` (`OPEN`, `IN_PROGRESS`, `CLOSED`)
-- `priority` (`LOW`, `MEDIUM`, `HIGH`)
-- `userId`
-- `page` (default `1`)
-- `pageSize` (default `10`, max `100`)
-
-### Comments
-- `POST /v1/tickets/:ticketId/comments`
-- `GET /v1/tickets/:ticketId/comments`
-
-### Attachments
-- `POST /v1/tickets/:ticketId/attachments` (`multipart/form-data`, campo `file`)
-- `GET /v1/tickets/:ticketId/attachments`
-
-Arquivos são servidos em:
-- `GET /uploads/:fileName`
-
-## Padrão de resposta da API
-### Sucesso
-```json
-{
-  "success": true,
-  "data": {}
-}
-```
-
-### Erro
-```json
-{
-  "success": false,
-  "error": {
-    "message": "..."
-  }
-}
-```
-
-## Convenções arquiteturais obrigatórias
-- Módulos em minúsculo (`auth`, `users`, `tickets`, `comments`, `attachments`).
-- Controllers devem ser finos e apenas traduzir request/response.
-- Validação de entrada no controller com Zod (`body`, `params`, `query`).
-- Use-cases não dependem de Express.
-- Regras de negócio ficam em use-cases.
-- Prisma só pode ser usado em repositórios (implementações `prisma`).
-- Todo use-case deve ser criado via factory.
-- Rotas sempre versionadas com prefixo `/v1`.
-- Tratamento global de erros centralizado em `src/shared/http/global-error-handler.ts`.
-
-## Testes
-Rodar testes unitários:
-```bash
-npm run test
-```
-
-Modo watch:
-```bash
-npm run test:watch
-```
+## Convencoes obrigatorias
+- Prisma somente em repository
+- Use-case sem dependencia de Express
+- Controller fino + Zod
+- Composicao somente via factory
+- Rotas versionadas em `/v1`
+- Resposta padrao:
+  - sucesso: `{ "success": true, "data": ... }`
+  - erro: `{ "success": false, "error": { "message": "..." } }`

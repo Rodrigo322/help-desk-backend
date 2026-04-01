@@ -1,3 +1,5 @@
+import { Comment, User } from "@prisma/client";
+
 import { prisma } from "../../../../database/prisma";
 import {
   CommentEntity,
@@ -5,11 +7,16 @@ import {
   CreateCommentRepositoryInput
 } from "../comments-repository";
 
+type CommentWithAuthor = Comment & {
+  user: Pick<User, "id" | "name" | "email">;
+};
+
 export class PrismaCommentsRepository implements CommentsRepository {
   async create(data: CreateCommentRepositoryInput): Promise<CommentEntity> {
     const comment = await prisma.comment.create({
       data: {
         content: data.content,
+        isInternal: data.isInternal,
         ticketId: data.ticketId,
         userId: data.userId
       },
@@ -27,6 +34,7 @@ export class PrismaCommentsRepository implements CommentsRepository {
     return {
       id: comment.id,
       content: comment.content,
+      isInternal: comment.isInternal,
       ticketId: comment.ticketId,
       userId: comment.userId,
       author: {
@@ -39,9 +47,12 @@ export class PrismaCommentsRepository implements CommentsRepository {
     };
   }
 
-  async findManyByTicketId(ticketId: string): Promise<CommentEntity[]> {
+  async findManyByTicketId(ticketId: string, includeInternal: boolean): Promise<CommentEntity[]> {
     const comments = await prisma.comment.findMany({
-      where: { ticketId },
+      where: {
+        ticketId,
+        ...(includeInternal ? {} : { isInternal: false })
+      },
       include: {
         user: {
           select: {
@@ -54,9 +65,10 @@ export class PrismaCommentsRepository implements CommentsRepository {
       orderBy: { createdAt: "asc" }
     });
 
-    return comments.map((comment) => ({
+    return comments.map((comment: CommentWithAuthor) => ({
       id: comment.id,
       content: comment.content,
+      isInternal: comment.isInternal,
       ticketId: comment.ticketId,
       userId: comment.userId,
       author: {
@@ -69,4 +81,3 @@ export class PrismaCommentsRepository implements CommentsRepository {
     }));
   }
 }
-

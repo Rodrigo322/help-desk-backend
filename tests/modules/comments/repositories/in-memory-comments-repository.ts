@@ -22,6 +22,7 @@ export class InMemoryCommentsRepository implements CommentsRepository {
     const comment: CommentEntity = {
       id: randomUUID(),
       content: data.content,
+      isInternal: data.isInternal,
       ticketId: data.ticketId,
       userId: data.userId,
       author: {
@@ -38,8 +39,9 @@ export class InMemoryCommentsRepository implements CommentsRepository {
     return comment;
   }
 
-  async findManyByTicketId(ticketId: string): Promise<CommentEntity[]> {
-    return this.items.filter((item) => item.ticketId === ticketId);
+  async findManyByTicketId(ticketId: string, includeInternal: boolean): Promise<CommentEntity[]> {
+    return this.items.filter(
+      (item) => item.ticketId === ticketId && (includeInternal ? true : !item.isInternal)
+    );
   }
 }
-

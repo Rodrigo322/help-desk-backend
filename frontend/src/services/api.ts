@@ -1,14 +1,22 @@
 import axios, { AxiosError } from "axios";
 
 import { ApiResponse } from "../types/api";
+import { frontendEnvironment } from "../utils/env";
 import { getAuthToken } from "../utils/storage";
 
-const baseURL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3333/v1";
+const rawApiUrl = frontendEnvironment.VITE_API_URL;
+
+if (!rawApiUrl) {
+  console.error("[bootstrap] Missing VITE_API_URL. Configure frontend environment variables.");
+}
+
+export const apiBaseUrl = (rawApiUrl ?? "").replace(/\/+$/, "");
+export const apiPublicBaseUrl = apiBaseUrl.replace(/\/v1\/?$/, "");
 
 let unauthorizedHandler: (() => void) | null = null;
 
 export const api = axios.create({
-  baseURL
+  baseURL: apiBaseUrl
 });
 
 api.interceptors.request.use((config) => {
@@ -48,6 +56,16 @@ export function unwrapApiResponse<T>(payload: ApiResponse<T>): T {
 
 export function getApiErrorMessage(error: unknown): string {
   if (error instanceof AxiosError) {
+    if (!error.response) {
+      const isOfflineClient = typeof navigator !== "undefined" && navigator.onLine === false;
+
+      if (isOfflineClient) {
+        return "Sem conexao com a internet. Verifique sua rede e tente novamente.";
+      }
+
+      return "Nao foi possivel conectar ao backend. O servico pode estar fora do ar.";
+    }
+
     const message = (error.response?.data as { error?: { message?: string } } | undefined)?.error
       ?.message;
 

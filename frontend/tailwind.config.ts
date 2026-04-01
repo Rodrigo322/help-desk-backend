@@ -6,11 +6,15 @@ const config: Config = {
     extend: {
       colors: {
         brand: {
-          50: "#f0f9ff",
-          100: "#e0f2fe",
-          500: "#0ea5e9",
-          600: "#0284c7",
-          700: "#0369a1"
+          50: "#eef4ff",
+          100: "#dfeafd",
+          500: "#155fa8",
+          600: "#0f4f91",
+          700: "#0b3f77"
+        },
+        accent: {
+          500: "#fecd1b",
+          600: "#e9bc13"
         }
       }
     }
@@ -19,4 +23,3 @@ const config: Config = {
 };
 
 export default config;
-

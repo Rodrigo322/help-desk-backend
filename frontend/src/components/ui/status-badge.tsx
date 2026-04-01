@@ -7,12 +7,20 @@ type StatusBadgeProps = {
 };
 
 function getStatusVariant(status: TicketStatus) {
-  if (status === "OPEN") {
+  if (status === "NEW" || status === "OPEN") {
     return "info" as const;
   }
 
-  if (status === "IN_PROGRESS") {
+  if (status === "IN_PROGRESS" || status === "PENDING" || status === "ON_HOLD") {
     return "warning" as const;
+  }
+
+  if (status === "RESOLVED") {
+    return "success" as const;
+  }
+
+  if (status === "CLOSED") {
+    return "default" as const;
   }
 
   return "success" as const;
@@ -21,4 +29,3 @@ function getStatusVariant(status: TicketStatus) {
 export function StatusBadge({ status }: StatusBadgeProps) {
   return <Badge variant={getStatusVariant(status)}>{formatStatus(status)}</Badge>;
 }
-

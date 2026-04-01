@@ -1,5 +1,13 @@
-export type TicketStatus = "OPEN" | "IN_PROGRESS" | "CLOSED";
+export type TicketStatus =
+  | "NEW"
+  | "OPEN"
+  | "IN_PROGRESS"
+  | "PENDING"
+  | "ON_HOLD"
+  | "RESOLVED"
+  | "CLOSED";
 export type TicketPriority = "LOW" | "MEDIUM" | "HIGH";
+export type TicketListingScope = "department" | "created" | "assigned";
 
 export type Ticket = {
   id: string;
@@ -7,7 +15,12 @@ export type Ticket = {
   description: string;
   status: TicketStatus;
   priority: TicketPriority;
-  userId: string;
+  createdByUserId: string;
+  createdByUserName?: string;
+  originDepartmentId: string;
+  targetDepartmentId: string;
+  assignedToUserId: string | null;
+  closedByUserId: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -32,10 +45,10 @@ export type CreateTicketResponse = {
   ticket: Ticket;
 };
 
-export type UpdateTicketStatusPayload = {
-  status: TicketStatus;
+export type AssignTicketToSelfResponse = {
+  ticket: Ticket;
 };
 
-export type UpdateTicketStatusResponse = {
+export type CloseTicketResponse = {
   ticket: Ticket;
 };

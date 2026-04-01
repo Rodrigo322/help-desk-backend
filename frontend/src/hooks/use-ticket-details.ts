@@ -1,12 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { updateTicketStatusSchema } from "../schemas/tickets/update-ticket-status-schema";
 import { api, unwrapApiResponse } from "../services/api";
 import { ApiResponse } from "../types/api";
 import {
-  GetTicketDetailsResponse,
-  UpdateTicketStatusPayload,
-  UpdateTicketStatusResponse
+  AssignTicketToSelfResponse,
+  CloseTicketResponse,
+  GetTicketDetailsResponse
 } from "../types/ticket";
 
 export function useTicketDetails(ticketId: string) {
@@ -20,15 +19,13 @@ export function useTicketDetails(ticketId: string) {
   });
 }
 
-export function useUpdateTicketStatus(ticketId: string) {
+export function useAssignTicketToSelf(ticketId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (payload: UpdateTicketStatusPayload) => {
-      const parsedPayload = updateTicketStatusSchema.parse(payload);
-      const response = await api.patch<ApiResponse<UpdateTicketStatusResponse>>(
-        `/tickets/${ticketId}/status`,
-        parsedPayload
+    mutationFn: async () => {
+      const response = await api.post<ApiResponse<AssignTicketToSelfResponse>>(
+        `/tickets/${ticketId}/assign`
       );
 
       return unwrapApiResponse(response.data);
@@ -36,6 +33,26 @@ export function useUpdateTicketStatus(ticketId: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["ticket-details", ticketId] });
       queryClient.invalidateQueries({ queryKey: ["tickets"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+    }
+  });
+}
+
+export function useCloseTicket(ticketId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async () => {
+      const response = await api.patch<ApiResponse<CloseTicketResponse>>(
+        `/tickets/${ticketId}/close`
+      );
+
+      return unwrapApiResponse(response.data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["ticket-details", ticketId] });
+      queryClient.invalidateQueries({ queryKey: ["tickets"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
     }
   });
 }

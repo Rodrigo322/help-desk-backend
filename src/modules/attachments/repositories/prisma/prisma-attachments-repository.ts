@@ -1,3 +1,5 @@
+import { Attachment } from "@prisma/client";
+
 import { prisma } from "../../../../database/prisma";
 import {
   AttachmentEntity,
@@ -33,7 +35,7 @@ export class PrismaAttachmentsRepository implements AttachmentsRepository {
       orderBy: { createdAt: "asc" }
     });
 
-    return attachments.map((attachment) => ({
+    return attachments.map((attachment: Attachment) => ({
       id: attachment.id,
       fileName: attachment.fileName,
       fileUrl: attachment.fileUrl,
@@ -44,4 +46,3 @@ export class PrismaAttachmentsRepository implements AttachmentsRepository {
     }));
   }
 }
-

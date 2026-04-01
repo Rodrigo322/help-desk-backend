@@ -1,8 +1,35 @@
-import { app } from "./app";
+import { loadEnvironmentConfig } from "./configs/env";
 
-const port = Number(process.env.PORT ?? 3333);
+async function bootstrap() {
+  try {
+    const environment = loadEnvironmentConfig();
+    const { app } = await import("./app");
 
-app.listen(port, () => {
-  console.log(`HTTP server running on port ${port}`);
-});
+    const host = "0.0.0.0";
+    const server = app.listen(environment.PORT, host, () => {
+      console.log(
+        `[bootstrap] HTTP server started | env=${environment.NODE_ENV} | host=${host} | port=${environment.PORT}`
+      );
+    });
 
+    server.on("error", (error) => {
+      console.error("[bootstrap] Failed to start HTTP server:", error);
+      process.exit(1);
+    });
+
+    process.on("unhandledRejection", (reason) => {
+      console.error("[runtime] Unhandled rejection:", reason);
+    });
+
+    process.on("uncaughtException", (error) => {
+      console.error("[runtime] Uncaught exception:", error);
+      process.exit(1);
+    });
+  } catch (error) {
+    console.error("[bootstrap] Startup aborted due to invalid configuration.");
+    console.error(error instanceof Error ? error.message : error);
+    process.exit(1);
+  }
+}
+
+void bootstrap();

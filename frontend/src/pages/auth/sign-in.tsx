@@ -1,7 +1,7 @@
+﻿import { CircleHelp, LockKeyhole } from "lucide-react";
 import { Navigate, useLocation } from "react-router-dom";
 
 import { SignInForm } from "../../components/forms/sign-in-form";
-import { Card } from "../../components/ui/card";
 import { ErrorState } from "../../components/ui/error-state";
 import { useAuth } from "../../hooks/use-auth";
 import { useSignIn } from "../../hooks/use-sign-in";
@@ -26,17 +26,50 @@ export function SignInPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-50 p-4">
-      <Card className="w-full max-w-md space-y-4">
-        <div>
-          <h1 className="text-xl font-semibold text-slate-900">Acessar sistema</h1>
-          <p className="text-sm text-slate-500">Entre com suas credenciais para continuar.</p>
+    <div className="min-h-screen bg-[#f3f4f6] md:grid md:grid-cols-[41%_59%]">
+      <aside className="relative hidden overflow-hidden bg-[#0b3f77] md:flex md:flex-col md:justify-between">
+        <div className="absolute inset-0 bg-[linear-gradient(130deg,transparent_0%,transparent_42%,rgba(255,255,255,0.1)_42%,rgba(255,255,255,0.1)_100%)]" />
+
+        <div className="relative z-10 mx-auto flex h-full w-full max-w-lg flex-col justify-center px-10 py-16 text-white">
+          <div className="mb-10 h-48 w-48 rounded-sm bg-white/95" />
+
+          <h1 className="text-6xl font-bold leading-tight tracking-tight">
+            Sistema Interno de
+            <br />
+            Chamados
+          </h1>
+          <p className="mt-6 text-4xl font-semibold text-white/70">Justi Tratores</p>
         </div>
 
-        {errorMessage ? <ErrorState message={errorMessage} /> : null}
+        <p className="relative z-10 px-10 pb-8 text-lg text-white/45">
+          © 2024 Justi Tratores. Todos os direitos reservados.
+        </p>
+      </aside>
 
-        <SignInForm isLoading={signInMutation.isPending} onSubmit={handleSignIn} />
-      </Card>
+      <div className="flex min-h-screen flex-col items-center justify-center px-4 py-8 md:px-10">
+        <div className="w-full max-w-[620px] rounded-3xl border border-slate-200 bg-white px-7 py-8 shadow-[0_24px_60px_rgba(15,23,42,0.08)] md:px-10 md:py-10">
+          <div>
+            <h1 className="text-5xl font-bold text-slate-900">Entrar</h1>
+            <p className="mt-3 text-2xl text-slate-600">Acesse sua conta para gerenciar chamados.</p>
+          </div>
+
+          <div className="mt-8">
+            {errorMessage ? <ErrorState message={errorMessage} /> : null}
+            <SignInForm isLoading={signInMutation.isPending} onSubmit={handleSignIn} />
+          </div>
+        </div>
+
+        <div className="mt-8 flex items-center gap-8 text-lg text-slate-400">
+          <span className="inline-flex items-center gap-2">
+            <LockKeyhole size={16} />
+            Conexao Segura
+          </span>
+          <span className="inline-flex items-center gap-2">
+            <CircleHelp size={16} />
+            Central de Ajuda
+          </span>
+        </div>
+      </div>
     </div>
   );
 }

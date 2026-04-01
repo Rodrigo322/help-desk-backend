@@ -6,7 +6,8 @@ import { successResponse } from "../../../shared/http/api-response";
 import { makeCreateCommentUseCase } from "../factories/make-create-comment-use-case";
 
 const createCommentBodySchema = z.object({
-  content: z.string().min(1)
+  content: z.string().min(1),
+  isInternal: z.boolean().optional()
 });
 
 const createCommentParamsSchema = z.object({
@@ -18,7 +19,7 @@ const createCommentQuerySchema = z.object({});
 export class CreateCommentController {
   async handle(request: Request, response: Response, next: NextFunction) {
     try {
-      const { content } = createCommentBodySchema.parse(request.body);
+      const { content, isInternal } = createCommentBodySchema.parse(request.body);
       const { ticketId } = createCommentParamsSchema.parse(request.params);
       createCommentQuerySchema.parse(request.query);
 
@@ -31,6 +32,7 @@ export class CreateCommentController {
       const createCommentUseCase = makeCreateCommentUseCase();
       const result = await createCommentUseCase.execute({
         content,
+        isInternal,
         ticketId,
         userId
       });
@@ -41,4 +43,3 @@ export class CreateCommentController {
     }
   }
 }
-

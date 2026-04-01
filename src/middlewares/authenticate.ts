@@ -5,6 +5,8 @@ import { AppError } from "../shared/errors/app-error";
 
 type TokenPayload = {
   sub: string;
+  departmentId?: string;
+  role?: "EMPLOYEE" | "MANAGER" | "ADMIN";
 };
 
 export function authenticate(
@@ -33,7 +35,11 @@ export function authenticate(
   try {
     const decoded = verify(token, jwtSecret) as TokenPayload;
 
-    request.user = { sub: decoded.sub };
+    request.user = {
+      sub: decoded.sub,
+      departmentId: decoded.departmentId,
+      role: decoded.role
+    };
 
     return next();
   } catch {

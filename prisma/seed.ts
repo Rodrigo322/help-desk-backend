@@ -1,70 +1,140 @@
 import "dotenv/config";
 
-import { PrismaClient } from "@prisma/client";
+import { UserRole } from "@prisma/client";
 import { hash } from "bcryptjs";
 
-type SeedAdminInput = {
+import { prisma } from "../src/database/prisma";
+
+type SeedPrivilegedUserInput = {
   name: string;
   email: string;
   password: string;
+  role: UserRole;
+  departmentName: string;
 };
 
-const prisma = new PrismaClient();
+const fallbackMasterUser: SeedPrivilegedUserInput = {
+  name: "Master Admin",
+  email: "master@local.dev",
+  password: "Master@123456",
+  role: "ADMIN",
+  departmentName: "Operations"
+};
 
-const fallbackAdmin: SeedAdminInput = {
+const fallbackLocalAdminUser: SeedPrivilegedUserInput = {
   name: "Local Admin",
   email: "admin@local.dev",
-  password: "Admin@123456"
+  password: "admin123456",
+  role: "ADMIN",
+  departmentName: "General"
 };
 
-function resolveAdminInput(): SeedAdminInput {
-  const envAdmin = {
-    name: process.env.ADMIN_NAME,
-    email: process.env.ADMIN_EMAIL,
-    password: process.env.ADMIN_PASSWORD
+function normalizeRole(value: string | undefined): UserRole {
+  if (value?.trim() === "MANAGER") {
+    return "MANAGER";
+  }
+
+  if (value?.trim() === "EMPLOYEE") {
+    return "EMPLOYEE";
+  }
+
+  return "ADMIN";
+}
+
+function resolveMasterInput(): SeedPrivilegedUserInput {
+  const envMaster = {
+    name: process.env.MASTER_NAME ?? process.env.ADMIN_NAME,
+    email: process.env.MASTER_EMAIL ?? process.env.ADMIN_EMAIL,
+    password: process.env.MASTER_PASSWORD ?? process.env.ADMIN_PASSWORD,
+    role: process.env.MASTER_ROLE ?? process.env.ADMIN_ROLE,
+    departmentName: process.env.MASTER_DEPARTMENT ?? process.env.ADMIN_DEPARTMENT
   };
 
   const isProduction = process.env.NODE_ENV === "production";
-  const hasCompleteAdminEnv =
-    !!envAdmin.name?.trim() && !!envAdmin.email?.trim() && !!envAdmin.password?.trim();
+  const hasCompleteMasterEnv =
+    !!envMaster.name?.trim() && !!envMaster.email?.trim() && !!envMaster.password?.trim();
 
-  if (isProduction && !hasCompleteAdminEnv) {
+  if (isProduction && !hasCompleteMasterEnv) {
     throw new Error(
-      "Missing admin environment variables in production. Set ADMIN_NAME, ADMIN_EMAIL and ADMIN_PASSWORD."
+      "Missing master environment variables in production. Set MASTER_NAME, MASTER_EMAIL and MASTER_PASSWORD."
     );
   }
 
-  if (hasCompleteAdminEnv) {
+  if (hasCompleteMasterEnv) {
     return {
-      name: envAdmin.name!,
-      email: envAdmin.email!,
-      password: envAdmin.password!
+      name: envMaster.name!.trim(),
+      email: envMaster.email!.trim(),
+      password: envMaster.password!.trim(),
+      role: normalizeRole(envMaster.role),
+      departmentName: envMaster.departmentName?.trim() || fallbackMasterUser.departmentName
     };
   }
 
-  return fallbackAdmin;
+  return fallbackMasterUser;
 }
 
-async function main() {
-  const admin = resolveAdminInput();
-  const hashedPassword = await hash(admin.password, 10);
+async function upsertPrivilegedUser(input: SeedPrivilegedUserInput) {
+  const hashedPassword = await hash(input.password, 10);
 
-  const user = await prisma.user.upsert({
+  const department = await prisma.department.upsert({
     where: {
-      email: admin.email
+      name: input.departmentName
     },
     update: {
-      name: admin.name,
-      password: hashedPassword
+      isActive: true
     },
     create: {
-      name: admin.name,
-      email: admin.email,
-      password: hashedPassword
+      name: input.departmentName,
+      isActive: true
     }
   });
 
-  console.log(`Admin seed completed: ${user.email}`);
+  const user = await prisma.user.upsert({
+    where: {
+      email: input.email
+    },
+    update: {
+      name: input.name,
+      password: hashedPassword,
+      role: input.role,
+      departmentId: department.id,
+      isActive: true
+    },
+    create: {
+      name: input.name,
+      email: input.email,
+      password: hashedPassword,
+      role: input.role,
+      departmentId: department.id,
+      isActive: true
+    }
+  });
+
+  await prisma.department.update({
+    where: {
+      id: department.id
+    },
+    data: {
+      managerUserId: user.id
+    }
+  });
+
+  return { user, department };
+}
+
+async function main() {
+  const masterInput = resolveMasterInput();
+  const { user, department } = await upsertPrivilegedUser(masterInput);
+
+  console.log(`Master seed completed: ${user.email} | role=${user.role} | department=${department.name}`);
+
+  if (process.env.NODE_ENV !== "production" && masterInput.email !== fallbackLocalAdminUser.email) {
+    const localAdmin = await upsertPrivilegedUser(fallbackLocalAdminUser);
+
+    console.log(
+      `Local admin seed completed: ${localAdmin.user.email} | role=${localAdmin.user.role} | department=${localAdmin.department.name}`
+    );
+  }
 }
 
 main()
@@ -75,4 +145,3 @@ main()
   .finally(async () => {
     await prisma.$disconnect();
   });
-

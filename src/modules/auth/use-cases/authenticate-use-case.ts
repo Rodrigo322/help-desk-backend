@@ -1,3 +1,4 @@
+import { UserRole } from "@prisma/client";
 import { compare } from "bcryptjs";
 import { sign } from "jsonwebtoken";
 
@@ -15,6 +16,8 @@ export type AuthenticateUseCaseResponse = {
     id: string;
     name: string;
     email: string;
+    departmentId: string;
+    role: UserRole;
   };
 };
 
@@ -34,6 +37,10 @@ export class AuthenticateUseCase {
       throw new AppError("Invalid credentials.", 401);
     }
 
+    if (!user.isActive) {
+      throw new AppError("User account is inactive.", 403);
+    }
+
     const doesPasswordMatch = await compare(password, user.password);
 
     if (!doesPasswordMatch) {
@@ -46,17 +53,26 @@ export class AuthenticateUseCase {
       throw new AppError("JWT secret is not configured.", 500);
     }
 
-    const token = sign({}, jwtSecret, {
+    const token = sign(
+      {
+        departmentId: user.departmentId,
+        role: user.role
+      },
+      jwtSecret,
+      {
       subject: user.id,
       expiresIn: "1d"
-    });
+      }
+    );
 
     return {
       token,
       user: {
         id: user.id,
         name: user.name,
-        email: user.email
+        email: user.email,
+        departmentId: user.departmentId,
+        role: user.role
       }
     };
   }
