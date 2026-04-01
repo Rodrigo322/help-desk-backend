@@ -22,4 +22,5 @@ app.use("/uploads", express.static(multerConfig.uploadDirectory));
 app.use("/v1", routes);
 app.use(globalErrorHandler);
 
+export default app;
 export { app };
